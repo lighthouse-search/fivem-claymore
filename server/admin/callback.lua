@@ -25,5 +25,5 @@ end);
 
 lib.callback.register('hades_claymore:admin:clear_all', function(source, player_id, coordinates, permissions)
     can_action(source, nil, "admin", true);
-    clear_all();
+    clear_all(true);
 end);

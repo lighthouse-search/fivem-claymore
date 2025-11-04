@@ -8,6 +8,9 @@ TODO:
 - Code clean-up. This code is based on the GoSnitch codebase and still has some skeletons.
 - Sound effects
 - PED animations
+- Move player ids from player server IDs to CFX IDs.
+- Extensions (Allows calling out to external resources for permissions to handle shouldExplode/shouldPlace/shouldDefuse/etc logic).
+- /admin-claymore-clear: Option to delete Claymores in certain radius rather than always deleting all Claymores.
 
 # Setup
 

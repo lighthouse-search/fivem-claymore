@@ -66,8 +66,6 @@ function trigger_placement(admin, player_id, coordinates, permissions, enabled, 
     -- Create Claymore camera entry is SQL database.
     local claymore_id = claymore_create(player_id, netId, coordinates.x, coordinates.y, coordinates.z);
 
-    lib.print.info("PERMISSIONS!!");
-    lib.print.info(permissions);
     if (permissions == nil) then
         permissions = json.encode(default_permissions(claymore_id, player_id));
     end
@@ -139,13 +137,21 @@ function request_defuse(player_id, claymore_id)
     });
 end
 
-function clear_all()
+function clear_all(delete_spawned_entities)
     local claymores = claymore_list(nil, nil);
 
     MySQL.query.await('DELETE FROM `hades_claymore`');
 
-    for _, claymore in ipairs(claymores) do
-        print("DELETE ENTITY "..claymore.entity);
-        DeleteEntity(NetworkGetEntityFromNetworkId(claymore.entity))
+    if delete_spawned_entities ~= false then
+        for _, claymore in ipairs(claymores) do
+            print("DELETE ENTITY "..claymore.entity);
+            DeleteEntity(NetworkGetEntityFromNetworkId(claymore.entity))
+        end
     end
 end
+
+AddEventHandler("txAdmin:events:scheduledRestart", function(eventData)
+    if eventData.secondsRemaining == 60 then
+        clear_all(true)
+    end
+end)

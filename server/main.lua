@@ -1,5 +1,5 @@
 -- -- On shutdown, clear all claymores from database.
 -- AddEventHandler("onResourceStop", function(resource)
 --     print("CLEARING ALL!");
---     clear_all();
+--     clear_all(true);
 -- end)
