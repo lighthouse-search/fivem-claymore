@@ -122,7 +122,6 @@ function request_defuse(player_id, claymore_id)
     end
 
     local claymore = claymore_get(claymore_id);
-    print("claymore.x"..claymore.x);
     if not is_reasonable_coordinates(player_id, vector3(claymore.x, claymore.y, claymore.z), GetConfig().defuse.max_range) then
         TriggerClientEvent('ox_lib:notify', player_id, { type = 'error', title = 'Claymore Failed', description = 'Too far away from Claymore.' });
         return;

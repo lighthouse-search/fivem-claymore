@@ -27,7 +27,7 @@ function GetConfig()
             is_invisible = toboolean(GetConvar("hades_claymore_explosion_is_invisible", "false")),
             camera_shake = tonumber(GetConvar("hades_claymore_explosion_camera_shake", "1.0"))
         },
-        extensions = {
+        middleware = {
             
         }
     }
