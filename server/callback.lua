@@ -1,7 +1,9 @@
+-- File description: Server-side callbacks for Claymore actions.
+
 -- Allow the client to ask server if user can defuse/pick up Claymore.
 lib.callback.register('hades_claymore:can_action', function(source, claymore_id, action_type)
     print("Claymore id "..claymore_id)
-    return can_action(source, claymore_id, action_type)
+    return can_action(source, claymore_id, action_type, false)
 end)
 
 -- Allow the client to ask server if user can defuse/pick up Claymore.
@@ -10,8 +12,9 @@ lib.callback.register('hades_claymore:pickup', function(source, claymore_id)
     return request_pickup(source, claymore_id)
 end)
 
-lib.callback.register('hades_claymore:request_placement', function(source, x, y, z)
-    return request_placement(source, x, y, z)
+lib.callback.register('hades_claymore:request_placement', function(source)
+    local playerCoords = GetEntityCoords(GetPlayerPed(source))
+    return request_placement(source, playerCoords, false)
 end)
 
 -- Allow the client to ask server if user can defuse/pick up Claymore.

@@ -16,43 +16,80 @@ function can_claymore(player_id, claymore_id, action_type)
     end
 end
 
-function can_action(player_id, claymore_id, action_type)
-    local claymore = claymore_get(claymore_id);
-    local state = Entity(NetworkGetEntityFromNetworkId(claymore.entity)).state
-    local permissions = state.permissions;
-    local xPlayer = ESX.GetPlayerFromId(player_id)
-
-    if state.claymore ~= true then
-        return false;
-    end
-
-    for _, v in ipairs(permissions) do
-        if (v.all == true) then
-            -- Permission is applied to all players.
+function can_action(player_id, claymore_id, action_type, error_on_fail)
+    if (action_type == "admin") then
+        if (IsPlayerAceAllowed(player_id, GetConfig().admin.ace_role)) then
             return true;
-        end
-
-        -- Check if player has permission through their job.
-        if xPlayer and xPlayer.job.name then
-            if v.job == xPlayer.job.name and v.permission == action_type then
-                if v.value ~= nil then
-                    return v.value;
-                else
-                    return true
-                end
-            end
-        end
-
-        -- Check if player has permission through their ID.
-        if v.player_id == player_id and v.permission == action_type then
-            return true
+        else
+            -- Need to immediately return false otherwise admin actions might get accidentally approved in the permissions JSON for large amounts of people.
+            return false;
         end
     end
+
+    local decision = false;
 
     if IsPlayerAceAllowed(player_id, "claymore.permission."..action_type) then
-        return true;
+        decision = true;
     end
 
-    -- Nothing granted permission.
-    return false;
+    if claymore_id then
+        lib.print.debug("Claymore ID provided!");
+        local claymore = claymore_get(claymore_id);
+        local state = Entity(NetworkGetEntityFromNetworkId(claymore.entity)).state
+        local xPlayer = ESX.GetPlayerFromId(player_id);
+
+        local permissions = json.decode(state.permissions);
+        if (state.permissions == nil or #permissions == 0) then
+            lib.print.warn("No permissions set on Claymore ID "..claymore_id..". ");
+            lib.print.info(state.permissions);
+            permissions = {};
+        end
+
+        if state.claymore ~= "true" then
+            error("Invalid claymore id");
+            return;
+        end
+        
+        for _, v in ipairs(permissions) do
+            if (v.all == true) then
+                -- Permission is applied to all players.
+                lib.print.debug("Permissions callout 0");
+                decision = true;
+            end
+
+            -- Check if player has permission through their job.
+            if xPlayer and xPlayer.job.name then
+                if v.job == xPlayer.job.name and v.permission == action_type then
+                    if v.value ~= nil then
+                        lib.print.debug("Permissions callout 1");
+                        decision = v.value;
+                    else
+                        lib.print.debug("Permissions callout 2");
+                        decision = true;
+                    end
+                end
+            end
+
+            -- Check if player has permission through their ID.
+            lib.print.debug(v.player_id.." == "..player_id.." and "..v.permission.." == "..action_type);
+            if v.player_id == tonumber(player_id) and v.permission == action_type then
+                lib.print.debug("action_type "..action_type.." permission GRANTED to player "..player_id);
+                decision = true;
+            else
+                lib.print.debug("action_type "..action_type.." permission DENIED to player "..player_id);
+            end
+        end
+    else
+        lib.print.debug("No Claymore ID provided, skipping most permission checks.");
+    end
+
+    if decision == false and error_on_fail ~= false then
+        error("can_action: No permission " .. player_id .. " " .. (claymore_id or "none") .. " " .. tostring(action_type));
+    end
+
+    return decision;
+end
+
+function default_permissions(claymore_id, player_id)
+    return { { player_id = player_id, permission = "pickup" }, { player_id = player_id, permission = "dont_explode" } };
 end

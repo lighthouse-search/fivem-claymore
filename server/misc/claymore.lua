@@ -2,16 +2,18 @@
 
 -- Simple function to list claymore information from database.
 function claymore_list(start, limit)
-    if (start == nil or limit == nil) then
-        error("Invalid start or limit parameters.");
-        return;
+    -- Be careful: This data is sent to clients.
+    local query = 'SELECT `id`, `player_id`, `entity`, `x`, `y`, `z` FROM `hades_claymore`';
+    if start ~= nil or limit ~= nil then
+        query = query .. ' LIMIT ?, ?';
     end
 
-    -- Be careful: This data is sent to clients.
-    local response = MySQL.query.await('SELECT `id`, `player_id`, `entity`, `x`, `y`, `z` FROM `hades_claymore` LIMIT ?, ?', {
-        start,
-        limit
-    })
+    local params = {};
+    if start ~= nil or limit ~= nil then
+        params = { start, limit };
+    end
+
+    local response = MySQL.query.await(query, params);
 
     return response;
 end
@@ -43,6 +45,28 @@ function claymore_create(player_id, entity, x, y, z)
     return id;
 end
 
+function claymore_update(claymore_id, data)
+    local claymore = claymore_get(claymore_id);
+    if claymore == nil then
+        TriggerClientEvent('ox_lib:notify', player_id, { type = 'error', title = 'Claymore Failed', description = "Claymore not found." });
+        return;
+    end
+    
+    local coordinates = data.coordinates;
+    local obj = NetworkGetEntityFromNetworkId(claymore.entity);
+    local state = Entity(obj).state;
+
+    local id = MySQL.insert.await('UPDATE `hades_claymore` SET player_id=?, x=?, y=?, z=? WHERE id=?', {
+        data.player_id or claymore.player_id, coordinates.x or claymore.x, coordinates.y or claymore.y, coordinates.z or claymore.z, claymore_id
+    });
+
+    Entity(obj).state:set('enabled', data.enabled, true);
+    Entity(obj).state:set('player_id', data.player_id or claymore.player_id, true);
+    Entity(obj).state:set('permissions', data.permissions or state.permissions, true);
+
+    return claymore_id;
+end
+
 -- Remove claymore entry from database.
 function claymore_remove(id, remove_object)
     local claymore = claymore_get(id);
@@ -51,36 +75,25 @@ function claymore_remove(id, remove_object)
     });
 
     if (claymore ~= nil and remove_object ~= false) then
-        DeleteEntity(NetworkGetEntityFromNetworkId(claymore.entity))
+        DeleteEntity(NetworkGetEntityFromNetworkId(claymore.entity));
     end
 
     return true;
 end
 
--- Check if player is wearing a claymore.
-function is_player_wearing_Claymore(player_id)
-    local response = MySQL.query.await('SELECT `type`, `player_id`, `entity`, `x`, `y`, `z` FROM `Claymore_cameras` WHERE `player_id` = ? AND `type` = "player"', {
-        player_id
-    })
-
-    if #response > 0 then
-        return response;
-    else
-        return nil;
-    end
-end
-
 function claymore_explode(claymore_id)
+    -- Tell all clients to create explosion inside world.
+    local config = GetConfig();
+
     local claymore = claymore_get(claymore_id);
     TriggerClientEvent('fivem:createExplosion', -1, 
         claymore.x, claymore.y, claymore.z, 
-        28, 1.0, 
-        true, false, 1.0)
+        config.explosion.explosion_type, config.explosion.damage_scale, 
+        config.explosion.is_audible, config.explosion.is_invisible, config.explosion.camera_shake)
 end
 
-exports('camera_list', camera_list)
-exports('camera_get', camera_get)
+exports('claymore_list', claymore_list)
+exports('claymore_get', claymore_get)
 exports('claymore_create', claymore_create)
 exports('claymore_remove', claymore_remove)
-exports('is_player_wearing_Claymore', is_player_wearing_Claymore)
-exports('explode_claymore', claymore_explode)
+exports('claymore_explode', claymore_explode)
